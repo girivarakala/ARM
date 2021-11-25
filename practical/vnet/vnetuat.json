@@ -1,0 +1,168 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "vnetName": {
+        "type": "string",
+  
+        "metadata": {
+          "description": "Name of the Virtual Network"
+        }
+      },
+
+      "uatVnetAddressPrefix": {
+        "type": "string",
+  
+        "metadata": {
+          "description": "Value of the VNET Address prefix"
+        }
+      },
+      "uatSubnet01Prefix": {
+        "type": "string",
+  
+        "metadata": {
+          "description": "Address Range of the Subnet"
+        }
+      },
+      "uatSubnet02Prefix": {
+        "type": "string",
+  
+        "metadata": {
+          "description": "Address Range of the Subnet"
+        }
+      },
+       "uatSubnet03Prefix": {
+        "type": "string",
+  
+        "metadata": {
+          "description": "Address Range of the Subnet"
+        }
+      },
+      "uatSubnet01Name": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of the Subnet"
+        }
+      },
+       "uatSubnet02Name": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of the Subnet"
+        }
+      },
+       "uatSubnet03Name": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of the Subnet"
+        }
+      },
+      "location": {
+        "type": "string",
+        "metadata": {
+          "description": "Location of the resources to be deployed"
+        }
+      },
+       "resourceTags":{
+        "type": "object",
+        "metadata": {
+          "description": "The collection of resoruce tags passed from paramters file"
+        }
+      }
+      
+    },
+    "variables": {
+      "ddosProtectionPlanId":"/subscriptions/d3016484-e0be-4c58-8914-181280e68ef3/resourceGroups/AZ-PRD-EHP-MGMT-RG-01/providers/Microsoft.Network/ddosProtectionPlans/EHP-DDOSProtectionPlan"
+      
+    },
+    "resources": [
+     
+      {
+        "apiVersion": "2018-10-01",
+        "type": "Microsoft.Network/virtualNetworks",
+        "name": "[parameters('vnetName')]",
+        "location": "[parameters('location')]",
+        "tags": "[parameters('resourceTags')]",
+        "properties": {
+          "addressSpace": {
+            "addressPrefixes": [
+              "[parameters('uatVnetAddressPrefix')]"
+            ]
+          },
+           "enableDdosProtection": true,
+                  
+                  "ddosProtectionPlan": {
+                      "id": "[variables('ddosProtectionPlanId')]"
+                  },
+           "dhcpOptions": {
+            "dnsServers": [
+              
+              
+            ]
+          },
+         
+          "subnets": [
+            {
+              "name": "[parameters('uatSubnet01Name')]",
+              "properties": {
+                "addressPrefix": "[parameters('uatSubnet01Prefix')]",
+                "privateEndpointNetworkPolicies": "Disabled",
+                "serviceEndpoints": [
+                  {
+                    "service": "Microsoft.Sql"
+                  },
+                  {
+                    "service": "Microsoft.Storage"
+                  }
+                  
+                ]
+                
+              }
+            },
+           {
+              "name": "[parameters('uatSubnet02Name')]",
+              "properties": {
+                "addressPrefix": "[parameters('uatSubnet02Prefix')]",
+                "privateEndpointNetworkPolicies": "Disabled",
+                "serviceEndpoints": [
+                  {
+                    "service": "Microsoft.Sql"
+                  },
+                  {
+                    "service": "Microsoft.Storage"
+                  }
+                  
+                ]
+                
+              }
+            },
+             {
+              "name": "[parameters('uatSubnet03Name')]",
+              "properties": {
+                "addressPrefix": "[parameters('uatSubnet03Prefix')]",
+                "privateEndpointNetworkPolicies": "Disabled",
+                "serviceEndpoints": [
+                  {
+                    "service": "Microsoft.Sql"
+                  },
+                  {
+                    "service": "Microsoft.Storage"
+                  }
+                  
+                ]
+                
+              }
+            }
+  
+           
+            
+            
+           
+          ]
+        }
+      }
+      
+    ],
+    "outputs": {
+    }
+  }
+  

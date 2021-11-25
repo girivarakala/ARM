@@ -1,0 +1,92 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vnetName": {
+      "type": "string",
+
+      "metadata": {
+        "description": "Name of the Virtual Network"
+      }
+    },
+   
+    "vnetAddressPrefix": {
+      "type": "string",
+
+      "metadata": {
+        "description": "Value of the VNET Address prefix"
+      }
+    },
+   
+    "subnet01Prefix": {
+      "type": "string",
+
+      "metadata": {
+        "description": "Address Range of the Subnet"
+      }
+    },
+    
+    
+   
+    "subnet01Name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Subnet"
+      }
+    },
+    
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Location of the resources to be deployed"
+      }
+    } 
+    
+  },
+  "variables": {
+    
+  },
+  "resources": [
+   
+    {
+      "apiVersion": "2018-10-01",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('vnetName')]",
+      "location": "[parameters('location')]",
+     
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('vnetAddressPrefix')]"
+          ]
+        },
+       
+        "subnets": [
+          {
+            "name": "[parameters('subnet01Name')]",
+            "properties": {
+              "addressPrefix": "[parameters('subnet01Prefix')]",
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Sql"
+                }
+              ]
+              
+            }
+          }
+         
+          
+          
+          
+         
+          
+          
+         
+        ]
+      }
+    }
+    
+  ],
+  "outputs": {
+  }
+}
