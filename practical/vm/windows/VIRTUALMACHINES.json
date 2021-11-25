@@ -1,0 +1,276 @@
+{
+
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "VMName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Virtual machine"
+      }
+    },
+    "AVailabilitySetprovision": {
+      "type": "string",
+      "allowedValues": [
+        "Yes",
+        "No"
+      ],
+      "metadata": {
+        "description": "Select whether the availability set should be in provisioned or not."
+      }
+    },
+    "storageType": {
+      "type": "string",
+      "allowedValues": [
+        "Standard_LRS",
+        "StandardSSD_LRS",
+        "Premium_LRS",
+        "UltraSSD_LRS"
+      ]
+    },
+
+    "virtualMachineSize": {
+      "type": "string",
+      "defaultValue": "Standard_A4_V2",
+      "metadata": {
+        "description": "Size of the Virtual machine"
+      }
+    },
+    "VMCount": {
+      "type": "int",
+
+      "minValue": 1,
+      "maxValue": 5,
+      "metadata": {
+        "description": "Number of VMs to deploy, limit 5 since this sample is using a single storage account"
+      }
+    },
+    "windowsSkuversion":{
+     "type": "string",
+     "allowedValues": [
+      
+      "2016-Datacenter",
+      "2019-Datacenter"
+      
+    ],
+     "metadata": {
+      "description": "Windows operating system sku versions of the Virtual machine"
+    }
+    },
+    "virtualMachineAdminUserName": {
+      "type": "string",
+      "metadata": {
+        "description": "UserName of the Virtual machine"
+      }
+    },
+    "virtualMachineAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password of the Virtual machine"
+      }
+    },
+    "virtualNetworkRG": {
+      "type": "string",
+
+      "metadata": {
+        "description": "Resource group of the virtual network"
+      }
+    },
+    "virtualNetworkName": {
+      "type": "string",
+
+
+      "metadata": {
+        "description": "virtual network name"
+      }
+    },
+    "SubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet name for the app VM"
+      }
+    },
+    "OSDisk": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the OS disk of the Virtual machine"
+      }
+
+    },
+     "diagnosticStorageRgName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the diagnostic storage account"
+      }
+    },
+    "diagnosticStorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the diagnostic storage account"
+      }
+    },
+
+    "NicName": {
+      "type": "string",
+      "metadata": {
+        "description": "Network Interface card prefix of the Virtual machine"
+      }
+    },
+
+    "availabilitySetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Availability Set"
+      }
+    },
+    "availabilitySetPlatformFaultDomainCount": {
+      "type": "string",
+      "metadata": {
+        "description": "Number of fault domains for availability set"
+      }
+    },
+    "availabilitySetPlatformUpdateDomainCount": {
+      "type": "string",
+      "metadata": {
+        "description": "Number of Update domains for availability set"
+      }
+    }
+   
+    
+  },
+  "variables": {
+    "vnetId": "[resourceId(parameters('virtualNetworkRG'),'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "SubnetRef": {
+      "appsubnetref": "[concat(variables('vnetId'),'/subnets/',parameters('SubnetName'))]"
+    },
+     "windowsOffer": "WindowsServer",
+      "windowsSku": "[parameters('windowsSkuversion')]",
+      "windowsPublisher": "MicrosoftWindowsServer",
+    "availabilitySetId": {
+      "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+    }
+  },
+  "resources": [
+   
+      
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(parameters('NicName'),copyIndex(1))]",
+      "apiVersion": "2017-10-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[concat('ipconfig',copyIndex(1))]",
+            "properties": {
+                "subnet": {
+                    "id": "[variables('SubnetRef').appsubnetref]"
+                  },
+              "privateIPAllocationMethod": "Dynamic",
+              "applicationSecurityGroups": [
+              ]
+
+            }
+          }
+        ],
+        "dnsSettings": {
+          "dnsServers": [
+          ]
+        },
+        "enableIPForwarding": false
+      },
+      "copy": {
+        "name": "niccopy",
+        "count": "[parameters('VMCount')]"
+      },
+      "dependsOn": [
+      ]
+    },
+
+    {
+      "condition": "[equals(parameters('AVailabilitySetprovision'), 'Yes')]",
+      "name": "[parameters('availabilitySetName')]",
+      "type": "Microsoft.Compute/availabilitySets",
+      "apiVersion": "2017-12-01",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "aligned"
+      },
+      "properties": {
+        "platformFaultDomainCount": "[parameters('availabilitySetPlatformFaultDomainCount')]",
+        "platformUpdateDomainCount": "[parameters('availabilitySetPlatformUpdateDomainCount')]"
+
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "copy": {
+        "name": "nodeCopy",
+        "count": "[parameters('VMCount')]"
+      },
+      "name": "[concat(parameters('VMName'), copyIndex(1))]",
+      "apiVersion": "2018-06-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+
+        "availabilitySet": "[if(equals(parameters('AVailabilitySetprovision'), 'Yes'), variables('availabilitySetId'), json('null'))]",
+
+
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[reference(resourceId(parameters('diagnosticStorageRgName'), 'Microsoft.Storage/storageAccounts', parameters('diagnosticStorageAccountName')), '2016-01-01').primaryEndpoints.blob]"
+
+          }
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('virtualMachineSize')]"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('NicName'),copyIndex(1)))]"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[concat(parameters('VMName'), copyIndex(1))]",
+          "adminUsername": "[parameters('virtualMachineAdminUserName')]",
+          "windowsConfiguration": {
+            "provisionVMAgent": true
+          },
+          "secrets": [
+          ],
+          "adminPassword": "[parameters('virtualMachineAdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+              "publisher": "[variables('windowsPublisher')]",
+              "offer": "[variables('windowsOffer')]",
+              "sku": "[variables('windowsSku')]",
+              "version": "latest"
+            },
+
+          "osDisk": {
+            "caching": "ReadWrite",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "[parameters('storageType')]"
+
+            },
+
+            "name": "[concat(parameters('OSDisk'), copyIndex(1))]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', concat(parameters('NicName'),copyIndex(1)))]",
+        "[concat('Microsoft.Compute/availabilitySets/', parameters('availabilitySetName'))]"
+
+      ]
+    }
+  ],
+
+  "outputs": {
+  }
+}
