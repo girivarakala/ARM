@@ -1,0 +1,63 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vnetName": {
+      "value": "armdemo-vnet",
+      "metadata": {
+        "description": "Name of the virtual network to be deployed"
+      }
+    },
+    
+    "vnetAddressPrefix1": {
+      "value": "172.26.0.0/16",
+      "metadata": {
+        "description": "Address range of the virtual network to be deployed"
+      }
+    },
+    "vnetAddressPrefix2": {
+      "value": "172.29.0.0/16",
+      "metadata": {
+        "description": "Address range of the virtual network to be deployed"
+      }
+    },
+    "dnsServerIp": {
+      "value": "172.35.234.45",
+
+      "metadata": {
+        "description": "Value of the VNET Address prefix"
+      }
+    },
+    "subnets": {
+        "value": [
+            {
+                "addressPrefix": "172.26.0.0/24",
+                "name": "AzureBastionSubnet"
+            },
+            {
+                "addressPrefix": "172.26.1.0/24",
+                "name": "armdemo-subnet"
+            }
+            
+        ],
+        "metadata": {
+          "description":"Name and address prefix of the subnets of virtual network to be created"
+        }
+       
+    },
+     
+    "resourceTags":{
+     "value": {
+       "Application": "abc",
+       "env": "dev"
+     },
+       "metadata":{
+         "description": "Tags applied for all the resources to be given"
+       }
+    }
+ } 
+    
+   
+    
+}
+

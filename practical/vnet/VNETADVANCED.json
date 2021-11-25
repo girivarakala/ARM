@@ -1,0 +1,103 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vnetName": {
+      "type": "string",
+
+      "metadata": {
+        "description": "Name of the Virtual Network"
+      }
+    },
+    "vnetAddressPrefix1": {
+      "type": "string",
+
+      "metadata": {
+        "description": "Value of the VNET Address prefix"
+      }
+    },
+    "vnetAddressPrefix2": {
+      "type": "string",
+
+      "metadata": {
+        "description": "Value of the VNET Address prefix"
+      }
+    },
+    "dnsServerIp": {
+      "type": "string",
+
+      "metadata": {
+        "description": "Value of the VNET Address prefix"
+      }
+    },
+    
+    
+    "resourceTags":{
+      "type": "object",
+      "metadata": {
+        "description": "The collection of resoruce tags passed from paramters file"
+      }
+    },
+    "subnets": {
+      "type": "array",
+      "metadata": {
+        "description": "Name of the required subnets to be passes as  an array to create multiple subnets"
+      }
+  }
+
+   
+    
+   
+    
+  },
+  "variables": {
+    
+  },
+  "resources": [
+   
+    {
+      "apiVersion": "2018-10-01",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('vnetName')]",
+      "location": "[resourceGroup().location]",
+      "tags": "[parameters('resourceTags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('vnetAddressPrefix1')]",
+             "[parameters('vnetAddressPrefix2')]"
+          ]
+        },
+        "dhcpOptions": {
+          "dnsServers": [
+            "[parameters('dnsServerIp')]"
+          ]
+        }        
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/subnets",
+      "apiVersion": "2020-03-01",
+      "name": "[concat(parameters('vnetName'), '/', parameters('subnets')[copyindex()].name)]",
+      "dependsOn": [
+          "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+      ],
+      "copy": {
+          "name": "subnetLoop",
+          "count": "[length(parameters('subnets'))]",
+          "mode": "Serial",
+          "batchSize": 2
+      },
+
+      "properties": {
+          "addressPrefix": "[parameters('subnets')[copyindex()].addressPrefix]",
+          "delegations": [],
+          "privateEndpointNetworkPolicies": "Enabled",
+          "privateLinkServiceNetworkPolicies": "Enabled"
+      }
+  }
+
+  ],
+  "outputs": {
+  }
+}
