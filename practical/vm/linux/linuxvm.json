@@ -1,0 +1,455 @@
+{
+
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "VMName": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of the Virtual machine"
+        }
+      },
+      "AVailabilitySetprovision": {
+        "type": "string",
+        "allowedValues": [
+          "Yes",
+          "No"
+        ],
+        "metadata": {
+          "description": "Select whether the availability set should be in provisioned or not."
+        }
+      },
+      "storageType": {
+        "type": "string",
+        "allowedValues": [
+          "Standard_LRS",
+          "StandardSSD_LRS",
+          "Premium_LRS",
+          "UltraSSD_LRS"
+        ]
+      },
+  
+      "virtualMachineSize": {
+        "type": "string",
+        "defaultValue": "Standard_A4_V2",
+        "metadata": {
+          "description": "Size of the Virtual machine"
+        }
+      },
+      "VMCount": {
+        "type": "int",
+  
+        "minValue": 1,
+        "maxValue": 5,
+        "metadata": {
+          "description": "Number of VMs to deploy, limit 5 since this sample is using a single storage account"
+        }
+      },
+      "linuxSku": {
+        "type": "string",
+        "allowedValues": [
+          "18.04-LTS"
+  
+  
+        ],
+        "metadata": {
+          "description": "Windows operating system sku versions of the Virtual machine"
+        }
+      },
+      "virtualMachineAdminUserName": {
+        "type": "string",
+        "metadata": {
+          "description": "UserName of the Virtual machine"
+        }
+      },
+  
+      "virtualNetworkRG": {
+        "type": "string",
+  
+        "metadata": {
+          "description": "Resource group of the virtual network"
+        }
+      },
+      "virtualNetworkName": {
+        "type": "string",
+  
+  
+        "metadata": {
+          "description": "virtual network name"
+        }
+      },
+      "SubnetName": {
+        "type": "string",
+        "metadata": {
+          "description": "Subnet name for the app VM"
+        }
+      },
+      "OSDisk": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of the OS disk of the Virtual machine"
+        }
+  
+      },
+      "diagnosticStorageAccountName": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of the diagnostic storage account"
+        }
+      },
+  
+      "NicName": {
+        "type": "string",
+        "metadata": {
+          "description": "Network Interface card prefix of the Virtual machine"
+        }
+      },
+  
+      "availabilitySetName": {
+        "type": "string",
+        "metadata": {
+          "description": "Name of the Availability Set"
+        }
+      },
+      "availabilitySetPlatformFaultDomainCount": {
+        "type": "string",
+        "metadata": {
+          "description": "Number of fault domains for availability set"
+        }
+      },
+      "availabilitySetPlatformUpdateDomainCount": {
+        "type": "string",
+        "metadata": {
+          "description": "Number of Update domains for availability set"
+        }
+      },
+      "existingstorageaccountrg": {
+      "type": "string",
+      "metadata": {
+        "description": "Existing storage account rg name"
+      }
+    },
+      "vmAdminPublicKey": {
+        "type": "string",
+        "metadata": {
+          "description": "public key of the linux virtual machine"
+        }
+      },
+      "sastoken": {
+        "type": "string",
+        "metadata": {
+          "description": "The sastoken of the storage account"
+        }
+      }
+  
+  
+  
+    },
+    "variables": {
+      "storageaccount":"[concat(subscription().id, '/resourceGroups/', parameters('existingstorageaccountrg'),'Microsoft.Storage/storageAccounts/', parameters('diagnosticStorageAccountName'))]",
+      "vnetId": "[resourceId(parameters('virtualNetworkRG'),'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+      "vmName": "[parameters('VMName')]",
+      "SubnetRef": {
+        "appsubnetref": "[concat(variables('vnetId'),'/subnets/',parameters('SubnetName'))]"
+      },
+      "Offer": "UbuntuServer",
+      "Sku": "[parameters('linuxSku')]",
+      "Publisher": "Canonical",
+  
+      "availabilitySetId": {
+        "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+      }
+  
+  
+  
+    },
+    "resources": [
+  
+  
+      {
+        "type": "Microsoft.Network/networkInterfaces",
+        "name": "[concat(parameters('NicName'),copyIndex(1))]",
+        "apiVersion": "2017-10-01",
+        "location": "[resourceGroup().location]",
+        "properties": {
+          "ipConfigurations": [
+            {
+              "name": "[concat('ipconfig',copyIndex(1))]",
+              "properties": {
+                "subnet": {
+                  "id": "[variables('SubnetRef').appsubnetref]"
+                },
+                "privateIPAllocationMethod": "Dynamic",
+                "applicationSecurityGroups": [
+                ]
+  
+              }
+            }
+          ],
+          "dnsSettings": {
+            "dnsServers": [
+            ]
+          },
+          "enableIPForwarding": false
+        },
+        "copy": {
+          "name": "niccopy",
+          "count": "[parameters('VMCount')]"
+        },
+        "dependsOn": [
+        ]
+      },
+  
+      {
+        "condition": "[equals(parameters('AVailabilitySetprovision'), 'Yes')]",
+        "name": "[parameters('availabilitySetName')]",
+        "type": "Microsoft.Compute/availabilitySets",
+        "apiVersion": "2017-12-01",
+        "location": "[resourceGroup().location]",
+        "sku": {
+          "name": "aligned"
+        },
+        "properties": {
+          "platformFaultDomainCount": "[parameters('availabilitySetPlatformFaultDomainCount')]",
+          "platformUpdateDomainCount": "[parameters('availabilitySetPlatformUpdateDomainCount')]"
+  
+        }
+      },
+      {
+        "type": "Microsoft.Compute/virtualMachines",
+        "copy": {
+          "name": "nodeCopy",
+          "count": "[parameters('VMCount')]"
+        },
+        "name": "[parameters('VMName')]",
+        "apiVersion": "2020-06-01",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+          "[concat('Microsoft.Network/networkInterfaces/', concat(parameters('NicName'),copyIndex(1)))]",
+          "[concat('Microsoft.Compute/availabilitySets/', parameters('availabilitySetName'))]"
+  
+        ],
+        "properties": {
+  
+          "availabilitySet": "[if(equals(parameters('AVailabilitySetprovision'), 'Yes'), variables('availabilitySetId'), json('null'))]",
+  
+  
+          "diagnosticsProfile": {
+            "bootDiagnostics": {
+              "enabled": true,
+              "storageUri": "[concat('https://', parameters('diagnosticStorageAccountName'), '.blob.core.windows.net/')]"
+  
+            }
+          },
+          "hardwareProfile": {
+            "vmSize": "[parameters('virtualMachineSize')]"
+          },
+          "networkProfile": {
+            "networkInterfaces": [
+              {
+                "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('NicName'),copyIndex(1)))]"
+              }
+            ]
+          },
+          "osProfile": {
+            "computerName": "[concat(parameters('VMName'), copyIndex(1))]",
+            "adminUsername": "[parameters('virtualMachineAdminUserName')]",
+            "linuxConfiguration": {
+              "disablePasswordAuthentication": true,
+              "ssh": {
+                "publicKeys": [
+                  {
+                    "path": "[concat('/home/', parameters('virtualMachineAdminUserName'), '/.ssh/authorized_keys')]",
+                    "keyData": "[parameters('vmAdminPublicKey')]"
+                  }
+                ]
+              }
+            }
+  
+  
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "[variables('Publisher')]",
+              "offer": "[variables('Offer')]",
+              "sku": "[variables('Sku')]",
+              "version": "latest"
+            },
+  
+            "osDisk": {
+              "caching": "ReadWrite",
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "[parameters('storageType')]"
+  
+              },
+  
+              "name": "[concat(parameters('OSDisk'), copyIndex(1))]"
+            }
+          }
+        },
+        "resources": [
+          {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "2017-12-01",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(variables('vmName'), '/Microsoft.Insights.VMDiagnosticSettings')]",
+            "dependsOn": [
+              "[parameters('VMName')]"
+            ],
+            "tags": {
+              "displayName": "AzureDiagnostics"
+            },
+            "properties": {
+              "publisher": "Microsoft.Azure.Diagnostics",
+              "type": "LinuxDiagnostic",
+              "autoUpgradeMinorVersion": true,
+              "typeHandlerVersion": "3.0",
+              "protectedSettings": {
+                "storageAccountName": "[variables('storageaccount')]",
+                "storageAccountEndPoint": "https://core.windows.net",
+                "storageAccountSasToken": "[parameters('sasToken')]"
+              },
+              "settings": {
+                "StorageAccount": "[variables('storageaccount')]",
+                "ladCfg": {
+                  "diagnosticMonitorConfiguration": {
+                    "syslogEvents": {
+                      "syslogEventConfiguration": {
+                        "LOG_AUTH": "LOG_DEBUG",
+                        "LOG_AUTHPRIV": "LOG_DEBUG",
+                        "LOG_CRON": "LOG_DEBUG",
+                        "LOG_DAEMON": "LOG_DEBUG",
+                        "LOG_FTP": "LOG_DEBUG",
+                        "LOG_KERN": "LOG_DEBUG",
+                        "LOG_LOCAL0": "LOG_DEBUG",
+                        "LOG_LOCAL1": "LOG_DEBUG",
+                        "LOG_LOCAL2": "LOG_DEBUG",
+                        "LOG_LOCAL3": "LOG_DEBUG",
+                        "LOG_LOCAL4": "LOG_DEBUG",
+                        "LOG_LOCAL5": "LOG_DEBUG",
+                        "LOG_LOCAL6": "LOG_DEBUG",
+                        "LOG_LOCAL7": "LOG_DEBUG",
+                        "LOG_LPR": "LOG_DEBUG",
+                        "LOG_MAIL": "LOG_DEBUG",
+                        "LOG_NEWS": "LOG_DEBUG",
+                        "LOG_SYSLOG": "LOG_DEBUG",
+                        "LOG_USER": "LOG_DEBUG",
+                        "LOG_UUCP": "LOG_DEBUG"
+                      }
+                    },
+                    "eventVolume": "Medium",
+                    "metrics": {
+                      "resourceId": "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
+                      "metricAggregation": [
+                        { "scheduledTransferPeriod": "PT1H" },
+                        { "scheduledTransferPeriod": "PT1M" }
+                      ]
+                    },
+  
+                    "performanceCounters": {
+                      "performanceCounterConfiguration": [
+                        {
+                          "annotation": [
+                            {
+                              "displayName": "Filesystem % free space",
+                              "locale": "en-us"
+                            }
+                          ],
+                          "class": "filesystem",
+                          "condition": "IsAggregate=TRUE",
+                          "counter": "percentfreespace",
+                          "counterSpecifier": "/builtin/filesystem/percentfreespace",
+                          "type": "builtin",
+                          "unit": "Percent"
+                        },
+                        {
+                          "annotation": [
+                            {
+                              "displayName": "Filesystem % used space",
+                              "locale": "en-us"
+                            }
+                          ],
+                          "class": "filesystem",
+                          "condition": "IsAggregate=TRUE",
+                          "counter": "percentusedspace",
+                          "counterSpecifier": "/builtin/filesystem/percentusedspace",
+                          "type": "builtin",
+                          "unit": "Percent"
+                        },
+                        {
+                          "annotation": [
+                            {
+                              "displayName": "Filesystem used space",
+                              "locale": "en-us"
+                            }
+                          ],
+                          "class": "filesystem",
+                          "condition": "IsAggregate=TRUE",
+                          "counter": "usedspace",
+                          "counterSpecifier": "/builtin/filesystem/usedspace",
+                          "type": "builtin",
+                          "unit": "Bytes"
+                        },
+                        {
+                          "annotation": [
+                            {
+                              "displayName": "Filesystem read bytes/sec",
+                              "locale": "en-us"
+                            }
+                          ],
+                          "class": "filesystem",
+                          "condition": "IsAggregate=TRUE",
+                          "counter": "bytesreadpersecond",
+                          "counterSpecifier": "/builtin/filesystem/bytesreadpersecond",
+                          "type": "builtin",
+                          "unit": "CountPerSecond"
+                        },
+                        {
+                          "annotation": [
+                            {
+                              "displayName": "Filesystem free space",
+                              "locale": "en-us"
+                            }
+                          ],
+                          "class": "filesystem",
+                          "condition": "IsAggregate=TRUE",
+                          "counter": "freespace",
+                          "counterSpecifier": "/builtin/filesystem/freespace",
+                          "type": "builtin",
+                          "unit": "Bytes"
+                        },
+                        {
+                          "annotation": [
+                            {
+                              "displayName": "Filesystem % free inodes",
+                              "locale": "en-us"
+                            }
+                          ],
+                          "class": "filesystem",
+                          "condition": "IsAggregate=TRUE",
+                          "counter": "percentfreeinodes",
+                          "counterSpecifier": "/builtin/filesystem/percentfreeinodes",
+                          "type": "builtin",
+                          "unit": "Percent"
+                        }
+                      ]
+                    }
+                  },
+                  "sampleRateInSeconds": 15
+                }
+              }
+            }
+          }
+  
+        ]
+  
+  
+      }
+  
+    ],
+  
+    "outputs": {
+    }
+  }
+  
